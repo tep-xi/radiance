@@ -11,6 +11,9 @@
 #ifdef RADIANCE_LUX
     #include "output/lux.h"
 #endif
+#ifdef RADIANCE_PP
+    #include "output/pixel_pusher.h"
+#endif
 
 static volatile int output_running;
 static volatile int output_refresh_request = false;
@@ -19,6 +22,9 @@ static struct render * render = NULL;
 
 #ifdef RADIANCE_LUX
     static bool output_on_lux = false;
+#endif
+#ifdef RADIANCE_PP
+    static bool output_on_pp = false;
 #endif
 
 static int output_reload_devices() {
@@ -29,9 +35,18 @@ static int output_reload_devices() {
         }
     #endif
 
+    #ifdef RADIANCE_PP
+        if (output_on_pp) {
+            output_pp_term();
+        }
+    #endif
+
     // Reload configuration
     #ifdef RADIANCE_LUX
         output_on_lux = false;
+    #endif
+    #ifdef RADIANCE_PP
+        output_on_pp = false;
     #endif
     int rc = output_config_load(&output_config, params.paths.output_config);
     if (rc < 0) {
@@ -45,6 +60,14 @@ static int output_reload_devices() {
             int rc = output_lux_init();
             if (rc < 0) PERROR("Unable to initialize lux");
             else output_on_lux = true;
+        }
+    #endif
+
+    #ifdef RADIANCE_PP
+        if (output_config.pixel_pusher.enabled) {
+            int rc = output_pp_init();
+            if (rc < 0) PERROR("Unable to initialize pixel pusher");
+            else output_on_pp = true;
         }
     #endif
 
@@ -62,7 +85,7 @@ int output_run(void * args) {
     double stat_ops = 100;
     int render_count = 0;
 
-    output_running = true;   
+    output_running = true;
     int last_tick = SDL_GetTicks();
     unsigned int last_output_render_count = output_render_count;
     (void) last_output_render_count; //TODO
@@ -87,6 +110,12 @@ int output_run(void * args) {
             }
         #endif
 
+        #ifdef RADIANCE_PP
+            if (output_on_pp) {
+                if (output_pp_do_frame() < 0) PERROR("Unable to do PixelPusher frame");
+            }
+        #endif
+
         //SDL_framerateDelay(&fps_manager);
         SDL_Delay(1);
         int tick = SDL_GetTicks();
@@ -107,6 +136,9 @@ int output_run(void * args) {
     // Destroy output
     #ifdef RADIANCE_LUX
         if(output_on_lux) output_lux_term();
+    #endif
+    #ifdef RADIANCE_PP
+        if (output_on_pp) output_pp_term();
     #endif
     output_config_del(&output_config);
 
