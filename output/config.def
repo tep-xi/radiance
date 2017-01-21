@@ -7,7 +7,7 @@ CFGSECTION_LIST(lux_channel,
     CFG(uri, STRING, "udp://127.0.0.1:1365")
     CFG(sync, INT, 0)
 )
- 
+
 CFGSECTION_LIST(lux_strip,
     CFG(address, LUXADDR, 0x00000001)
     CFG(ui_name, STRING, "strip")
@@ -20,7 +20,7 @@ CFGSECTION_LIST(lux_strip,
     CFG(gamma, FLOAT, 1.0)
     CFG(vertexlist, VERTEXLIST, "-1 -1, 1 1")
 )
- 
+
 CFGSECTION_LIST(lux_spot,
     CFG(address, LUXADDR, 0x00000001)
     CFG(ui_name, STRING, "spot")
@@ -29,7 +29,7 @@ CFGSECTION_LIST(lux_spot,
     CFG(oversample, INT, 1)
     CFG(vertexlist, VERTEXLIST, "-1 -1, 1 1")
 )
- 
+
 CFGSECTION_LIST(lux_grid,
     CFG(address, LUXADDR, 0x00000001)
     CFG(ui_name, STRING, "spot")
@@ -39,6 +39,20 @@ CFGSECTION_LIST(lux_grid,
     CFG(height, INT, -1)
     CFG(max_energy, FLOAT, 1)
     CFG(gamma, FLOAT, 1.0)
+    CFG(vertexlist, VERTEXLIST, "-1 -1, 1 1")
+)
+
+CFGSECTION(pixel_pusher,
+    CFG(enabled, INT, 0)
+    CFG(port, INT, 7331)
+    CFG(discovery_seconds, INT, 5)
+)
+
+CFGSECTION_LIST(pixel_pusher_grid,
+    CFG(ui_name, STRING, "pp_grid")
+    CFG(strip_num, INT, -1)
+    CFG(width, INT, -1)
+    CFG(height, INT, -1)
     CFG(vertexlist, VERTEXLIST, "-1 -1, 1 1")
 )
 
