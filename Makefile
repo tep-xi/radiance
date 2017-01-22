@@ -50,7 +50,7 @@ OBJECTS = $(C_SRC:%.c=$(OBJDIR)/%.o)
 # Compiler flags
 INC = -I.
 
-LIBRARIES = -lSDL2 -lSDL2_ttf -lm -lportaudio -lportmidi -lfftw3 -lsamplerate
+LIBRARIES = -lSDL2 -lSDL2_ttf -lm -lportaudio -lportmidi -lfftw3 -lsamplerate -lSOIL
 ifdef __LINUX__
 	LIBRARIES += -lGL -lGLU
 else

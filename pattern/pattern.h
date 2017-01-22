@@ -19,6 +19,8 @@ struct pattern {
     GLuint fb;
     GLint * uni_tex;
     GLuint tex_output;
+
+    GLuint image;
 };
 
 int pattern_init(struct pattern * pattern, const char * prefix);

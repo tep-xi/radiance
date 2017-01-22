@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <SOIL/SOIL.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,9 +29,11 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
     if(pattern->name == NULL) ERROR("Could not allocate memory");
 
     int n = 0;
+
     for(;;) {
         char * filename;
         struct stat statbuf;
+
         filename = rsprintf("%s%s.%d.glsl", config.pattern.dir, prefix, n);
         if(filename == NULL) MEMFAIL();
 
@@ -44,9 +47,28 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
     }
 
     if(n == 0) {
-        ERROR("Could not find any shaders for %s", prefix);
-        return 1;
+        ERROR("Could not find any shaders for %s, trying to load an image", prefix);
+
+        // Now try to load an image
+        char * filename;
+        filename = rsprintf("%s%s", config.images.dir, prefix);
+        if (filename == NULL) MEMFAIL();
+
+        pattern->image = SOIL_load_OGL_texture(
+            filename,
+            SOIL_LOAD_AUTO,
+            SOIL_CREATE_NEW_ID,
+            SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_COMPRESS_TO_DXT
+        );
+
+        if(pattern->image) {
+            n = 1;
+        } else {
+            ERROR("Could not load image: %s", SOIL_last_result());
+            return -1;
+        }
     }
+
     pattern->n_shaders = n;
 
     pattern->shader = calloc(pattern->n_shaders, sizeof *pattern->shader);
@@ -57,7 +79,12 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
     bool success = true;
     for(int i = 0; i < pattern->n_shaders; i++) {
         char * filename;
-        filename = rsprintf("%s%s.%d.glsl", config.pattern.dir, prefix, i);
+        // Jank as fuck
+        if (pattern->image) {
+            filename = rsprintf("%simage.0.glsl", config.pattern.dir);
+        } else {
+            filename = rsprintf("%s%s.%d.glsl", config.pattern.dir, prefix, i);
+        }
         if(filename == NULL) MEMFAIL();
 
         GLhandleARB h = load_shader(filename);
@@ -91,7 +118,7 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.pattern.master_width, config.pattern.master_height, 0, 
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.pattern.master_width, config.pattern.master_height, 0,
                      GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     }
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -157,6 +184,7 @@ void pattern_render(struct pattern * pattern, GLuint input_tex) {
         if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", GLU_ERROR_STRING(e));
 
         GLint loc;
+
         loc = glGetUniformLocationARB(pattern->shader[i], "iTime");
         glUniform1fARB(loc, time_master.beat_frac + time_master.beat_index);
         loc = glGetUniformLocationARB(pattern->shader[i], "iAudioHi");
@@ -179,6 +207,15 @@ void pattern_render(struct pattern * pattern, GLuint input_tex) {
         glUniform1iARB(loc, 0);
         loc = glGetUniformLocationARB(pattern->shader[i], "iChannel");
         glUniform1ivARB(loc, pattern->n_shaders, pattern->uni_tex);
+
+        if (pattern->image) {
+            int texture_index = pattern->n_shaders + 1;
+            glActiveTexture(GL_TEXTURE0 + texture_index);
+            glBindTexture(GL_TEXTURE_2D, pattern->image);
+
+            loc = glGetUniformLocationARB(pattern->shader[i], "iImage");
+            glUniform1iARB(loc, texture_index);
+        }
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, input_tex);
