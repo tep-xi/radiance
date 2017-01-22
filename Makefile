@@ -22,7 +22,7 @@ OBJECTS = $(C_SRC:%.c=$(OBJDIR)/%.o)
 # Compiler flags
 INC = -I.
 
-LIBRARIES = -lSDL2 -lSDL2_ttf -lGL -lGLU -lm -lportaudio -lportmidi -lfftw3 -lsamplerate
+LIBRARIES = -lSDL2 -lSDL2_ttf -lGL -lGLU -lm -lportaudio -lportmidi -lfftw3 -lsamplerate -lSOIL
 
 CFLAGS = -std=c99 -ggdb3 -O3 $(INC)
 CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter
@@ -48,7 +48,7 @@ $(OBJDIR)/%.o: %.c
 
 # luxctl utility
 luxctl: $(OBJDIR)/luxctl.o $(OBJDIR)/liblux/lux.o $(OBJDIR)/liblux/crc.o
-	$(CC) $(LFLAGS) -o $@ $^ 
+	$(CC) $(LFLAGS) -o $@ $^
 
 .PHONY: all
 all: $(PROJECT) luxctl
