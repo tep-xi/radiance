@@ -8,7 +8,9 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <SOIL/SOIL.h>
+#include <IL/il.h>
+#include <IL/ilu.h>
+#include <IL/ilut.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +19,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <math.h>
+
+static bool il_initted = false;
 
 int pattern_init(struct pattern * pattern, const char * prefix) {
     GLenum e;
@@ -54,17 +58,18 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
         filename = rsprintf("%s%s", config.images.dir, prefix);
         if (filename == NULL) MEMFAIL();
 
-        pattern->image = SOIL_load_OGL_texture(
-            filename,
-            SOIL_LOAD_AUTO,
-            SOIL_CREATE_NEW_ID,
-            SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_COMPRESS_TO_DXT
-        );
+        if (!il_initted) {
+            ilInit();
+            il_initted = true;
+        }
 
-        if(pattern->image) {
+        pattern->image = ilutGLLoadImage(filename);
+
+        ILenum error = ilGetError();
+        if (error == IL_NO_ERROR) {
             n = 1;
         } else {
-            ERROR("Could not load image: %s", SOIL_last_result());
+            ERROR("Could not load image: %s", iluErrorString(error));
             return -1;
         }
     }

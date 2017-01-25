@@ -22,11 +22,12 @@ OBJECTS = $(C_SRC:%.c=$(OBJDIR)/%.o)
 # Compiler flags
 INC = -I.
 
-LIBRARIES = -lSDL2 -lSDL2_ttf -lGL -lGLU -lm -lportaudio -lportmidi -lfftw3 -lsamplerate -lSOIL
+LIBRARIES = -lSDL2 -lSDL2_ttf -lGL -lGLU -lm -lportaudio -lportmidi -lfftw3 -lsamplerate -lIL -lILU -lILUT
 
 CFLAGS = -std=c99 -ggdb3 -O3 $(INC)
 CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter
 CFLAGS += -D_POSIX_C_SOURCE=20160524
+CFLAGS += -DILUT_USE_OPENGL
 LFLAGS = $(CFLAGS)
 
 # File dependency generation

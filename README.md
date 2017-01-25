@@ -21,11 +21,11 @@ Build
 - `PortMIDI`
 - `FFTW3`
 - `libsamplerate`
-- `SOIL`
+- `DevIL`
 
 Install dependencies on Ubuntu:
 
-    $ sudo apt-get install libsdl2-dev libgl1-mesa-dev libsdl2-ttf-dev libportmidi-dev libfftw3-dev libsamplerate0-dev libsoil-dev
+    $ sudo apt-get install libsdl2-dev libgl1-mesa-dev libsdl2-ttf-dev libportmidi-dev libfftw3-dev libsamplerate0-dev libdevil-dev
 
 Note: you may need to install a newer version of portaudio.
 
