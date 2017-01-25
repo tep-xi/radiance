@@ -46,6 +46,12 @@ CFGSECTION(pixel_pusher,
     CFG(enabled, INT, 0)
     CFG(port, INT, 7331)
     CFG(discovery_seconds, INT, 5)
+
+    CFG(ip0, INT, 0)
+    CFG(ip1, INT, 0)
+    CFG(ip2, INT, 0)
+    CFG(ip3, INT, 0)
+    CFG(data_port, INT, 0)
 )
 
 CFGSECTION_LIST(pixel_pusher_grid,

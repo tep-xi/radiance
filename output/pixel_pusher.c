@@ -26,10 +26,24 @@ static struct sockaddr_in * out_addr = NULL;
 
 static uint8_t * out_packet;
 
-static struct timespec packet_interval = { .tv_sec = 0, .tv_nsec = 500*1000};
+static struct timespec packet_interval = { .tv_sec = 0, .tv_nsec = 5000*1000};
 
 static int pp_find_pusher() {
     INFO("Initializing PixelPusher");
+
+    if (output_config.pixel_pusher.ip0) {
+        pp_info = calloc(1, sizeof *pp_info);
+        if (pp_info == NULL) MEMFAIL();
+
+        pp_info->info.my_port = output_config.pixel_pusher.data_port;
+        pp_info->header.ip_addr = (output_config.pixel_pusher.ip3 << 24) | (output_config.pixel_pusher.ip2 << 16) | (output_config.pixel_pusher.ip1 << 8) | output_config.pixel_pusher.ip0;
+
+        struct in_addr ip_addr;
+        ip_addr.s_addr = pp_info->header.ip_addr;
+        INFO("Found PixelPusher at IP address %s", inet_ntoa(ip_addr));
+
+        return 0;
+    }
 
     // Try to open a socket
     int server_fd = socket(AF_INET, SOCK_DGRAM, 0);
