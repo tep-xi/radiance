@@ -5,6 +5,11 @@
 #include "util/err.h"
 #include "util/math.h"
 
+#ifdef OSX
+    #include <mach/clock.h>
+    #include <mach/mach.h>
+#endif
+
 #include "time/timebase.h"
 
 #define N_MAX_TIME_SOURCES 8
@@ -50,10 +55,21 @@ void time_term() {
 
 void time_update(enum time_source source, enum time_source_event event, double event_arg) {
     struct timespec tv = {0, 0};
-    if (clock_gettime(CLOCK_MONOTONIC_RAW, &tv) != 0) {
-        PERROR("clock_gettime failed");
-        return;
-    }
+
+    #ifdef LINUX
+        if (clock_gettime(CLOCK_MONOTONIC_RAW, &tv) != 0) {
+            PERROR("clock_gettime failed");
+            return;
+        }
+    #elif OSX
+        clock_serv_t cclock;
+        mach_timespec_t mts;
+        host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+        clock_get_time(cclock, &mts);
+        mach_port_deallocate(mach_task_self(), cclock);
+        tv.tv_sec = mts.tv_sec;
+        tv.tv_nsec = mts.tv_nsec;
+    #endif
 
     // Convert to milliseconds
     long time_ms = tv.tv_sec * 1000 + tv.tv_nsec / (1000 * 1000);
