@@ -5,9 +5,8 @@
 #include "util/err.h"
 #include "util/math.h"
 
-#ifdef OSX
-    #include <mach/clock.h>
-    #include <mach/mach.h>
+#ifdef __APPLE__
+    #include <mach/mach_time.h>
 #endif
 
 #include "time/timebase.h"
@@ -16,6 +15,10 @@
 
 struct time_master time_master;
 double phase = 0.0;
+
+#ifdef __APPLE__
+    double time_conversion_factor;
+#endif
 
 // Maximum size of `time_master.beat_index`. 16 to track 4/4 beats+bars
 //static uint8_t master_beat_denominator = 16;
@@ -46,6 +49,13 @@ int time_init() {
     memset(&time_master, 0, sizeof time_master);
     time_master.bpm = 140;
     error_wrap_test();
+
+    #ifdef __APPLE__
+        mach_timebase_info_data_t timebase;
+        mach_timebase_info(&timebase);
+        time_conversion_factor = (double)timebase.numer / (double)timebase.denom;
+    #endif
+
     return 0;
 }
 
@@ -56,19 +66,15 @@ void time_term() {
 void time_update(enum time_source source, enum time_source_event event, double event_arg) {
     struct timespec tv = {0, 0};
 
-    #ifdef LINUX
+    #ifdef __LINUX__
         if (clock_gettime(CLOCK_MONOTONIC_RAW, &tv) != 0) {
             PERROR("clock_gettime failed");
             return;
         }
-    #elif OSX
-        clock_serv_t cclock;
-        mach_timespec_t mts;
-        host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
-        clock_get_time(cclock, &mts);
-        mach_port_deallocate(mach_task_self(), cclock);
-        tv.tv_sec = mts.tv_sec;
-        tv.tv_nsec = mts.tv_nsec;
+    #elif __APPLE__
+        uint64_t time = mach_absolute_time();
+        tv.tv_nsec = ((double)time) * time_conversion_factor;
+        tv.tv_sec = ((double)time) * time_conversion_factor / 1e9;
     #endif
 
     // Convert to milliseconds

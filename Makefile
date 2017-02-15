@@ -4,13 +4,13 @@ PROJECT = radiance
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
-	LINUX = true
-	CFLAGS = -DLINUX
+	__LINUX__ = true
+	CFLAGS = -D__LINUX__
 	RADIANCE_LUX = true
 endif
 ifeq ($(UNAME_S),Darwin)
-	OSX = true
-	CFLAGS = -DOSX -Wno-deprecated-declarations
+	__APPLE__ = true
+	CFLAGS = -Wno-deprecated-declarations
 endif
 
 # Source files
@@ -26,7 +26,7 @@ C_SRC += $(wildcard ui/*.c)
 C_SRC += $(filter-out util/opengl.c, $(wildcard util/*.c))
 C_SRC += $(wildcard BTrack/src/*.c)
 
-ifdef OSX
+ifdef __APPLE__
 	C_SRC += util/opengl.c
 endif
 
@@ -43,7 +43,7 @@ OBJECTS = $(C_SRC:%.c=$(OBJDIR)/%.o)
 INC = -I.
 
 LIBRARIES = -lSDL2 -lSDL2_ttf -lm -lportaudio -lportmidi -lfftw3 -lsamplerate
-ifdef LINUX
+ifdef __LINUX__
 	LIBRARIES += -lGL -lGLU
 else
 	LIBRARIES += -framework OpenGL

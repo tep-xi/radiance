@@ -216,7 +216,7 @@ void ui_init() {
     // seem to have any ill affect on operation, and in any event all of the OpenGL UI is getting blown
     // away soon in favor of Qt.
     e = glGetError();
-    #ifdef OSX
+    #ifdef __APPLE__
         if ((e != GL_NO_ERROR) && (e != GL_INVALID_OPERATION)) {
     #else
         if (e != GL_NO_ERROR) {

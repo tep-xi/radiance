@@ -1,12 +1,12 @@
-#ifdef LINUX
+#ifdef __LINUX__
     #include <GL/glu.h>
-#elif OSX
+#elif __APPLE__
     #include <OpenGL/glu.h>
 #endif
 
-#ifdef LINUX
+#ifdef __LINUX__
     #define GLU_ERROR_STRING(e) gluErrorString(e)
-#elif OSX
+#elif __APPLE__
     const char* osxGluErrorString(GLenum error);
     #define GLU_ERROR_STRING(e) osxGluErrorString(e)
 #endif
