@@ -14,7 +14,7 @@
 // This file implements a PixelPusher output.  It is designed to discover only 1 PixelPusher,
 // but to use multiple grids attached to that PixelPusher
 
-static struct pp_discovery_packet * pp_info = NULL;
+static struct pp_discovery_packet pp_info;
 
 static struct pp_device * grid_devices = NULL;
 static size_t n_grid_devices = 0;
@@ -22,8 +22,10 @@ static size_t n_grid_devices = 0;
 // Reusable state for sending data packets
 static int out_fd = -1;
 static uint32_t seq_num = 0;
-static struct sockaddr_in * out_addr = NULL;
+static struct sockaddr_in out_addr;
 
+// This is dynamic because we need to allocate memory based on
+// the number of pixels per strip.
 static uint8_t * out_packet;
 
 // See output_pp_do_frame for why we need this
@@ -69,18 +71,10 @@ static int pp_find_pusher() {
     }
 
     // Read
-    if (pp_info) {
-        free(pp_info);
-    }
-    pp_info = calloc(1, sizeof *pp_info);
-    if (pp_info == NULL) MEMFAIL();
-
-    size_t expected_bytes = sizeof *pp_info;
-    int bytes_read = read(server_fd, pp_info, expected_bytes);
+    size_t expected_bytes = sizeof pp_info;
+    int bytes_read = read(server_fd, &pp_info, expected_bytes);
     if (bytes_read < (int) expected_bytes) {
         PERROR("Expected to read %zu bytes from PixelPusher but read %d bytes", expected_bytes, bytes_read);
-        free(pp_info);
-        pp_info = NULL;
         close(server_fd);
         return -1;
     }
@@ -88,7 +82,7 @@ static int pp_find_pusher() {
     close(server_fd);
 
     struct in_addr ip_addr;
-    ip_addr.s_addr = pp_info->header.ip_addr;
+    ip_addr.s_addr = pp_info.header.ip_addr;
     INFO("Found PixelPusher at IP address %s", inet_ntoa(ip_addr));
 
     return 0;
@@ -154,12 +148,13 @@ static int pp_init_out() {
     // Target address
     // This is only called if pp_find_pusher finishes successfully, so
     // pp_info is set
-    out_addr = calloc(1, sizeof *out_addr);
-    out_addr->sin_family = AF_INET;
-    out_addr->sin_addr.s_addr = pp_info->header.ip_addr;
-    out_addr->sin_port = htons(pp_info->info.my_port);
+    out_addr.sin_family = AF_INET;
+    out_addr.sin_addr.s_addr = pp_info.header.ip_addr;
+    out_addr.sin_port = htons(pp_info.info.my_port);
 
-    out_packet = calloc(1, 4 + 2*(1+3*240));
+    // 4 bytes for the sequence number; 2 strips each with a 1 byte strip
+    // number and 3 bytes (RGB) for each pixel
+    out_packet = calloc(1, 4 + 2*(1+3*grid_devices[0].base.pixels.length));
     if (out_packet == NULL) MEMFAIL();
 
     return 0;
@@ -170,20 +165,15 @@ int output_pp_init() {
         return -1;
     }
 
-    if (pp_init_out() < 0) {
+    if (pp_add_grids() < 0) {
         return -1;
     }
 
-    return pp_add_grids();
+    return pp_init_out();
 }
 
 void output_pp_term() {
     INFO("Terminating PixelPusher");
-
-    if (pp_info) {
-        free(pp_info);
-        pp_info = NULL;
-    }
 
     for (size_t i = 0; i < n_grid_devices; i++) {
         struct output_device base = grid_devices[i].base;
@@ -207,11 +197,6 @@ void output_pp_term() {
         out_fd = -1;
     }
 
-    if (out_addr) {
-        free(out_addr);
-        out_addr = NULL;
-    }
-
     if (out_packet) {
         free(out_packet);
         out_packet = NULL;
@@ -222,6 +207,8 @@ int output_pp_do_frame() {
     seq_num++;
 
     ((uint32_t *) out_packet)[0] = seq_num;
+    // We'll use this to keep track of our location in the packet buffer
+    // as we fill it.  The sequence number is 4 bytes so we start after that.
     size_t out_packet_idx = 4;
 
     for (size_t i = 0; i < n_grid_devices; i++) {
@@ -250,9 +237,7 @@ int output_pp_do_frame() {
 
         // Send it: the PixelPusher can take 2 grids per packet
         if ((i % 2) || (i == n_grid_devices - 1)) {
-            printf("Sending packet with i=%zu\n", i);
-
-            size_t sent_bytes = sendto(out_fd, out_packet, out_packet_idx, 0, (struct sockaddr *) out_addr, sizeof *out_addr);
+            size_t sent_bytes = sendto(out_fd, out_packet, out_packet_idx, 0, (struct sockaddr *) &out_addr, sizeof out_addr);
             if (sent_bytes < out_packet_idx) {
                 PERROR("Error sending PixelPusher data");
                 return -1;
@@ -261,9 +246,15 @@ int output_pp_do_frame() {
             // The PixelPusher doesn't have a very large Ethernet buffer, and UDP doesn't resend things,
             // so if we don't give it some time to process it'll just drop any more incoming packets. The
             // symptom of this is only some of the grids will respond and the others will stay dark or
-            // flicker; if this happens increase packet_interval.
-            nanosleep(&packet_interval, NULL);
+            // flicker; if this happens increase packet_interval.  Don't bother doing this on the last
+            // packet, because any reasonable framerate will have delays much longer than this (even, say
+            // 1000 FPS = 1 millisecond > 500 microseconds.
+            if (i != n_grid_devices - 1) {
+                nanosleep(&packet_interval, NULL);
+            }
 
+            // Reset the packet buffer index to after the sequence number - it will
+            // stay the same for all of the packets in this frame.
             out_packet_idx = 4;
         }
     }

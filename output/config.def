@@ -45,7 +45,7 @@ CFGSECTION_LIST(lux_grid,
 CFGSECTION(pixel_pusher,
     CFG(enabled, INT, 0)
     CFG(port, INT, 7331)
-    CFG(discovery_seconds, INT, 5)
+    CFG(discovery_seconds, INT, 2)
 )
 
 CFGSECTION_LIST(pixel_pusher_grid,
