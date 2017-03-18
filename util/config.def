@@ -58,6 +58,10 @@ CFGSECTION(paths,
     CFG(params_config, STRING, "resources/params.ini")
 )
 
+CFGSECTION(network,
+    CFG(port, INT, 2153)
+)
+
 #undef CFGSECTION
 #undef CFGSECTION_LIST
 #undef CFG

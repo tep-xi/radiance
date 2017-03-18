@@ -1,3 +1,4 @@
+#include "pattern/network.h"
 #include "pattern/pattern.h"
 #include "time/timebase.h"
 #include "util/glsl.h"
@@ -13,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -102,6 +104,28 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
     if(!success) {
         ERROR("Failed to load some shaders.");
         return 2;
+    }
+
+    if (!strcmp(pattern->name, "network")) {
+        // TODO: Think about concurrency here.  It's probably fine because worst case we'll
+        // just get half a frame...right?
+        size_t buffer_bytes = 2 * config.pattern.master_width * config.pattern.master_height * 4;
+
+        if (buffer_bytes > MAX_UDP_FRAME_SIZE) {
+            ERROR("Network would require %zu bytes, which is more than the UDP max frame size of " MAX_UDP_FRAME_SIZE_STR ".", buffer_bytes);
+        }
+
+        pattern->child_buffer = calloc(buffer_bytes, 1);
+        if (!pattern->child_buffer) {
+            MEMFAIL();
+            return 2;
+        }
+
+        pattern->network_thread = SDL_CreateThread(&network_receive, "Network", pattern->child_buffer);
+        if (!pattern->network_thread) {
+            ERROR("Failed to create network listening thread!");
+            return 2;
+        }
     }
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", GLU_ERROR_STRING(e));
@@ -208,10 +232,14 @@ void pattern_render(struct pattern * pattern, GLuint input_tex) {
         loc = glGetUniformLocationARB(pattern->shader[i], "iChannel");
         glUniform1ivARB(loc, pattern->n_shaders, pattern->uni_tex);
 
-        if (pattern->image) {
+        if (pattern->image || pattern->child_buffer) {
             int texture_index = pattern->n_shaders + 1;
             glActiveTexture(GL_TEXTURE0 + texture_index);
             glBindTexture(GL_TEXTURE_2D, pattern->image);
+
+            if (pattern->child_buffer) {
+                gluBuild2DMipmaps(GL_TEXTURE_2D, 4, config.pattern.master_width, config.pattern.master_height, GL_RGBA, GL_UNSIGNED_BYTE, pattern->child_buffer);
+            }
 
             loc = glGetUniformLocationARB(pattern->shader[i], "iImage");
             glUniform1iARB(loc, texture_index);
