@@ -14,6 +14,9 @@
 #ifdef RADIANCE_PP
     #include "output/pixel_pusher.h"
 #endif
+#ifdef RADIANCE_KNT
+    #include "output/kinetics.h"
+#endif
 
 static volatile int output_running;
 static volatile int output_refresh_request = false;
@@ -25,6 +28,9 @@ static struct render * render = NULL;
 #endif
 #ifdef RADIANCE_PP
     static bool output_on_pp = false;
+#endif
+#ifdef RADIANCE_KNT
+    static bool output_on_knt = false;
 #endif
 
 static int output_reload_devices() {
@@ -41,12 +47,21 @@ static int output_reload_devices() {
         }
     #endif
 
+    #ifdef RADIANCE_KNT
+        if (output_on_knt) {
+            output_knt_term();
+        }
+    #endif
+
     // Reload configuration
     #ifdef RADIANCE_LUX
         output_on_lux = false;
     #endif
     #ifdef RADIANCE_PP
         output_on_pp = false;
+    #endif
+    #ifdef RADIANCE_KNT
+        output_on_knt = false;
     #endif
     int rc = output_config_load(&output_config, params.paths.output_config);
     if (rc < 0) {
@@ -68,6 +83,14 @@ static int output_reload_devices() {
             int rc = output_pp_init();
             if (rc < 0) PERROR("Unable to initialize pixel pusher");
             else output_on_pp = true;
+        }
+    #endif
+
+    #ifdef RADIANCE_KNT
+        if (output_config.kinetic.enabled) {
+            int rc = output_knt_init();
+            if (rc < 0) PERROR("Unable to initialize kinetics");
+            else output_on_knt = true;
         }
     #endif
 
@@ -116,6 +139,12 @@ int output_run(void * args) {
             }
         #endif
 
+        #ifdef RADIANCE_KNT
+            if (output_on_knt) {
+                if (output_knt_do_frame() < 0) PERROR("Unable to do Kinetics frame");
+            }
+        #endif
+
         //SDL_framerateDelay(&fps_manager);
         SDL_Delay(1);
         int tick = SDL_GetTicks();
@@ -139,6 +168,9 @@ int output_run(void * args) {
     #endif
     #ifdef RADIANCE_PP
         if (output_on_pp) output_pp_term();
+    #endif
+    #ifdef RADIANCE_PP
+        if (output_on_knt) output_knt_term();
     #endif
     output_config_del(&output_config);
 

@@ -56,6 +56,20 @@ CFGSECTION_LIST(pixel_pusher_grid,
     CFG(vertexlist, VERTEXLIST, "-1 -1, 1 1")
 )
 
+CFGSECTION(kinetic,
+    CFG(enabled, INT, 1)
+)
+
+CFGSECTION_LIST(kinetic_strip,
+    CFG(ui_name, STRING, "kinetic_strip")
+    CFG(port, INT, 6038)
+    CFG(ip, STRING, "18.102.224.64")
+    CFG(dmx_start, INT, -1)
+    CFG(width, INT, -1)
+    CFG(height, INT, -1)
+    CFG(vertexlist, VERTEXLIST, "-1 -1, 1 1")
+)
+
 #undef CFGSECTION
 #undef CFGSECTION_LIST
 #undef CFG

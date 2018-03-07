@@ -110,7 +110,7 @@ static const int map_end[19] =   {8,  8,  8,  8,  8,  8,  8,  8,  8,  16, 16, 16
 static int snap_states[19];
 
 // Font
-TTF_Font * font;
+TTF_Font * font = NULL;
 static const SDL_Color font_color = {255, 255, 255, 255};
 
 // Pat entry
@@ -446,7 +446,7 @@ static void redraw_pattern_ui(int s) {
     snap_states[s] = 0;
     const struct pattern * p = deck[map_deck[s]].pattern[map_pattern[s]];
     if (p == NULL) return;
-    
+
     if(pattern_name_textures[s] != NULL) SDL_DestroyTexture(pattern_name_textures[s]);
     pattern_name_textures[s] = render_text(p->name, &pattern_name_width[s], &pattern_name_height[s]);
 }
@@ -723,7 +723,7 @@ static void ui_render(bool select) {
                     y = -v->y;
                 }
 #else // PIXEL INDICATOR
-                // Maybe this is horrendously slow because it has to draw a quad for every output pixel? 
+                // Maybe this is horrendously slow because it has to draw a quad for every output pixel?
                 // It looks cool though
                 for (size_t i = 0; i < d->pixels.length; i++) {
                     double x = d->pixels.xs[i];
@@ -1031,7 +1031,7 @@ void ui_run() {
             ui_render(true);
 
             while(SDL_PollEvent(&e) != 0) {
-                if (midi_command_event != (Uint32) -1 && 
+                if (midi_command_event != (Uint32) -1 &&
                     e.type == midi_command_event) {
                     struct midi_event * me = e.user.data1;
                     switch (me->type) {
@@ -1103,4 +1103,3 @@ void ui_run() {
             l_t = cur_t;
         }
 }
-

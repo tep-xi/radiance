@@ -8,11 +8,13 @@ ifeq ($(UNAME_S),Linux)
 	CFLAGS = -D__LINUX__
 	RADIANCE_LUX = true
 	RADIANCE_PP = true
+  RADIANCE_KNT = true
 endif
 ifeq ($(UNAME_S),Darwin)
 	__APPLE__ = true
 	CFLAGS = -Wno-deprecated-declarations
 	RADIANCE_PP = true
+  RADIANCE_KNT = true
 endif
 
 # Source files
@@ -20,7 +22,7 @@ C_SRC  = main.c
 C_SRC += $(wildcard audio/*.c)
 C_SRC += $(wildcard midi/*.c)
 # We'll add back the backends later below if appropriate
-C_SRC += $(filter-out output/lux.c, $(filter-out output/pixel_pusher.c, $(wildcard output/*.c)))
+C_SRC += $(filter-out output/lux.c, $(filter-out output/pixel_pusher.c, $(filter-out output/kinetics.c, $(wildcard output/*.c))))
 C_SRC += $(wildcard pattern/*.c)
 C_SRC += $(wildcard time/*.c)
 C_SRC += $(wildcard ui/*.c)
@@ -41,6 +43,11 @@ endif
 ifdef RADIANCE_PP
 	C_SRC += output/pixel_pusher.c
 	CFLAGS += -DRADIANCE_PP
+endif
+
+ifdef RADIANCE_KNT
+  C_SRC += output/kinetics.c
+  CFLAGS += -DRADIANCE_KNT
 endif
 
 OBJDIR = build
